@@ -55,8 +55,67 @@ EthernetServer server(TCP_PORT);
 
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 
+bool isFullyOpen()
+{
+    return digitalRead(SAFETY_FULLY_OPEN_PIN) == LOW;
+}
+
+bool isFullyClosed()
+{
+    return digitalRead(SAFETY_FULLY_CLOSED_PIN) == LOW;
+}
+
+bool isMoving()
+{
+    return motor.isMoving();
+}
+
+bool isOpening()
+{
+    return isMoving() && motor.getDirection() == BTS7960_LEFT;
+}
+
+bool isClosing()
+{
+    return isMoving() && motor.getDirection() == BTS7960_RIGHT;
+}
+
+void updateState()
+{
+    if (isFullyClosed())
+    {
+        current_state = state_closed;
+    }
+    else if (isFullyOpen())
+    {
+        current_state = state_open;
+    }
+    else if (motor.isMoving())
+    {
+        if (motor.getDirection() == BTS7960_LEFT)
+        {
+            current_state = state_opening;
+        }
+        else
+        {
+            current_state = state_closing;
+        }
+    }
+    else
+    {
+        current_state = state_idle;
+    }
+
+    double motor_current_left = motor.readLeftCurrent();
+    double motor_current_right = motor.readRightCurrent();
+
+    motor_current = max(motor_current_left, motor_current_right);
+}
+
 void checkStatus(Stream *client)
 {
+    updateState();
+
     switch (current_state)
     {
     case state_idle:
@@ -215,31 +274,6 @@ void setup()
     watchdog.start(2000);
 }
 
-bool isFullyOpen()
-{
-    return digitalRead(SAFETY_FULLY_OPEN_PIN) == LOW;
-}
-
-bool isFullyClosed()
-{
-    return digitalRead(SAFETY_FULLY_CLOSED_PIN) == LOW;
-}
-
-bool isMoving()
-{
-    return motor.isMoving();
-}
-
-bool isOpening()
-{
-    return isMoving() && motor.getDirection() == BTS7960_LEFT;
-}
-
-bool isClosing()
-{
-    return isMoving() && motor.getDirection() == BTS7960_RIGHT;
-}
-
 void open()
 {
     if (!isFullyOpen())
@@ -259,38 +293,6 @@ void close()
 void stop()
 {
     motor.stop();
-}
-
-void updateState()
-{
-    if (isFullyClosed())
-    {
-        current_state = state_closed;
-    }
-    else if (isFullyOpen())
-    {
-        current_state = state_open;
-    }
-    else if (motor.isMoving())
-    {
-        if (motor.getDirection() == BTS7960_LEFT)
-        {
-            current_state = state_opening;
-        }
-        else
-        {
-            current_state = state_closing;
-        }
-    }
-    else
-    {
-        current_state = state_idle;
-    }
-
-    double motor_current_left = motor.readLeftCurrent();
-    double motor_current_right = motor.readRightCurrent();
-
-    motor_current = max(motor_current_left, motor_current_right);
 }
 
 void printState(Stream* s)
@@ -319,6 +321,8 @@ void printState(Stream* s)
         s->print(F("open"));
         break;
     }
+
+    s->println();
 }
 
 void checkInput()
@@ -337,6 +341,24 @@ void checkInput()
     }
 }
 
+void executeCommand(command cmd)
+{
+    switch (cmd)
+    {
+    case cmd_open:
+        open();
+        break;
+    case cmd_close:
+        close();
+        break;
+    case cmd_stop:
+        stop();
+        break;
+    }
+
+    updateState();
+}
+
 void loop()
 {
     watchdog.kick();
@@ -349,30 +371,16 @@ void loop()
         Serial.println(F("Got command"));
         Serial.println(*cmd);
 
-        switch (*cmd)
-        {
-        case cmd_close:
-            close();
-            break;
-        case cmd_open:
-            open();
-            break;
-        case cmd_stop:
-            stop();
-            break;
-        }
+        executeCommand(*cmd);
 
         delete cmd;
     }
-
-    updateState();
 
     ethernetMaintain();
 
     if (udp.beginPacket(remoteUDP, UDP_PORT))
     {
         printState(&udp);
-        udp.println();
         udp.endPacket();
     }
     else
@@ -382,6 +390,5 @@ void loop()
 
 #ifdef DEBUG
     printState(&Serial);
-    Serial.println();
 #endif
 }
