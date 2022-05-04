@@ -27,10 +27,11 @@ typedef enum {
     state_closing,
     state_closed,
     state_open,
+    state_unknown,
 } state;
 
 rtos::Queue<command, 10> command_queue;
-#define WAIT_TIME rtos::Kernel::Clock::duration_u32(1000)
+#define WAIT_TIME rtos::Kernel::Clock::duration_u32(100)
 
 rtos::Thread sensors;
 
@@ -42,7 +43,7 @@ Bounce emergencyClose = Bounce(EMERGENCY_CLOSE_PIN, 50);
 
 BTS7960 motor(R_PWM, L_PWM, R_EN, L_EN, R_IS, L_IS);
 
-state current_state = state_idle;
+state current_state = state_unknown;
 
 byte mac[6] = MAC_ADDRESS;
 EthernetUDP udp;
