@@ -9,6 +9,7 @@
 // 3rd party libs
 #include <Ethernet.h>
 #include <Bounce2.h>
+#include <EthernetBonjour.h>
 
 // local libs
 #include <bts7960.h>
@@ -266,6 +267,8 @@ void setup()
 
     server.begin();
 
+    EthernetBonjour.begin("dragonlair");
+
 #ifdef DEBUG
     Serial.println(F("Ready"));
 #endif
@@ -302,7 +305,7 @@ void printState(Stream* s)
     s->print(current_state);
     s->print(",motor_current=");
     s->print(motor_current);
-    s->print(",state_str=");
+    s->print(",state_str=\"");
 
     switch (current_state)
     {
@@ -323,7 +326,7 @@ void printState(Stream* s)
         break;
     }
 
-    s->println();
+    s->println("\"");
 }
 
 void checkInput()
@@ -360,6 +363,8 @@ void executeCommand(command cmd)
     updateState();
 }
 
+long lastUdpUpdateTime = millis();
+
 void loop()
 {
     watchdog.kick();
@@ -379,14 +384,19 @@ void loop()
 
     ethernetMaintain();
 
-    if (udp.beginPacket(remoteUDP, UDP_PORT))
+    if (millis() - lastUdpUpdateTime > 1000)
     {
-        printState(&udp);
-        udp.endPacket();
-    }
-    else
-    {
-        Serial.println(F("Failed to send UDP packet"));
+        lastUdpUpdateTime = millis();
+
+        if (udp.beginPacket(remoteUDP, UDP_PORT))
+        {
+            printState(&udp);
+            udp.endPacket();
+        }
+        else
+        {
+            Serial.println(F("Failed to send UDP packet"));
+        }
     }
 
 #ifdef DEBUG
