@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define MAC_ADDRESS {0x02, 0x00, 0x00, 0x00, 0x01, 0x01};
-#define UDP_PORT 40001
+#define UDP_PORT 40000
 #define UDP_ADDRESS "192.168.10.5"
 
 /*
