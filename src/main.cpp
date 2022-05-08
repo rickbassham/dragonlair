@@ -369,6 +369,8 @@ void loop()
 {
     watchdog.kick();
 
+    EthernetBonjour.run();
+
     checkInput();
 
     command* cmd;
@@ -397,9 +399,8 @@ void loop()
         {
             Serial.println(F("Failed to send UDP packet"));
         }
-    }
-
 #ifdef DEBUG
-    printState(&Serial);
+        printState(&Serial);
 #endif
+    }
 }
