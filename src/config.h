@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
-#define DEBUG
+// #define DEBUG
 
-#define MAC_ADDRESS {0x02, 0x00, 0x00, 0x00, 0x01, 0x01};
+#define MAC_ADDRESS {0x02, 0x0A, 0x41, 0xA0, 0x14, 0xB4};
 #define UDP_PORT 40000
 #define UDP_ADDRESS "192.168.10.5"
 
