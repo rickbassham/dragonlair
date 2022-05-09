@@ -242,6 +242,20 @@ void sensorThread()
     }
 }
 
+const char* buildHostname()
+{
+    static char hostname[32];
+    memset(hostname, 0, sizeof(hostname));
+    memcpy(hostname, "dragonlair-", 11);
+
+    for (int i = 2; i < 6; i++)
+    {
+        sprintf(hostname + strlen(hostname), "%02X", mac[i]);
+    }
+
+    return hostname;
+}
+
 void setup()
 {
     delay(5000);
@@ -267,7 +281,11 @@ void setup()
 
     server.begin();
 
-    EthernetBonjour.begin("dragonlair");
+    const char* hostname = buildHostname();
+#ifdef DEBUG
+    Serial.println(hostname);
+#endif
+    EthernetBonjour.begin(hostname);
 
 #ifdef DEBUG
     Serial.println(F("Ready"));
@@ -376,8 +394,10 @@ void loop()
     command* cmd;
     if (command_queue.try_get_for(WAIT_TIME, &cmd))
     {
+#ifdef DEBUG
         Serial.println(F("Got command"));
         Serial.println(*cmd);
+#endif
 
         executeCommand(*cmd);
 
